@@ -1,2 +1,7 @@
+.classpath
+.project
+.settings
 /bin/
-/target/
+/target/classes/
+/target/maven-archiver
+/target/maven-status
