@@ -1,4 +1,4 @@
-package com.blogspot.jesfre.commandline.runner;
+package com.blogspot.jesfre.commandline;
 
 import java.io.BufferedReader;
 import java.io.File;

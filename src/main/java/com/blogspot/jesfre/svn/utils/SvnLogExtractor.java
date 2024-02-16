@@ -9,7 +9,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 
-import com.blogspot.jesfre.commandline.runner.CommandLineRunner;
+import com.blogspot.jesfre.commandline.CommandLineRunner;
 
 /**
  * @author <a href="mailto:jorge.ruiz.aquino@gmail.com">Jorge Ruiz Aquino</a>
