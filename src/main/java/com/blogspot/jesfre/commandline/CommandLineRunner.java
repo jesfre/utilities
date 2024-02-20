@@ -11,6 +11,14 @@ import java.io.InputStreamReader;
  */
 public class CommandLineRunner {
 
+	private enum Mode {
+		WINDOWS, UNIX
+	}
+
+	private static final String CMD_RUN_PREFIX = "cmd /c ";
+	// TODO change mode to Unix
+	private static final Mode DEFAULT_MODE = Mode.WINDOWS;
+
 	public void run(String batFileLocation) throws IOException, InterruptedException {
 		System.out.println("Running file " + batFileLocation);
 		ProcessBuilder processBuilder = new ProcessBuilder(batFileLocation);
@@ -32,7 +40,17 @@ public class CommandLineRunner {
 		} else {
 			System.err.println("Error during execution of " + f.getName());
 		}
-
 	}
 
+	public void executeCommand(String command) {
+		System.out.println("Executing command>" + command);
+		try {
+			Process process = Runtime.getRuntime().exec(command);
+			process.waitFor();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
 }
