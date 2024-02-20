@@ -1,5 +1,9 @@
 package com.blogspot.jesfre.svn.utils;
 
+import static com.blogspot.jesfre.misc.PathUtils.formatPath;
+import static com.blogspot.jesfre.svn.utils.SvnLogExtractor.CommandExecutionMode.COMMAND_FILE;
+import static com.blogspot.jesfre.svn.utils.SvnLogExtractor.CommandExecutionMode.DIRECT_COMMAND;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,16 +43,22 @@ public class SvnLogExtractor {
 		BY_DATE_RANGE, BY_LIMIT;
 	}
 
+	public enum CommandExecutionMode {
+		DIRECT_COMMAND, COMMAND_FILE;
+	}
+
 	// svn log --limit 999 "/path/to/file >> /path/to/output/file"
 	private static final String BY_LIMIT_CMD = "svn log --limit %d %s >> %s";
 	// svn log -r {2023-11-20}:{2024-01-29}
 	private static final String BY_DATE_RANGE_CMD = "svn log -r {{0}}:{{1}}";
 	private static final String CMD_FILE_PATH = "/svn-logs/svnlog_limit-%d-%s.cmd";
 	private static final String LOG_FILE_PATH = "/svn-logs/logs_limit-%d-%s.txt";
+	private static final String LOGS_FOLDER_PATH = "/svn-logs";
 	private static final String LOG_SEPARATOR = StringUtils.repeat("-", 72);
 	private static final int MAX_LIMIT = 100;
 
 	private ExtractMode mode = ExtractMode.BY_LIMIT;
+	private CommandExecutionMode executionMode = DIRECT_COMMAND;
 	private String svnWorkDir;
 	private String outputFolder;
 
@@ -74,6 +84,11 @@ public class SvnLogExtractor {
 		return this;
 	}
 
+	public SvnLogExtractor withExecutionMode(CommandExecutionMode executionMode) {
+		this.executionMode = executionMode;
+		return this;
+	}
+
 	public SvnLogExtractor verbosity(boolean yesNo) {
 		this.verbose = yesNo;
 		return this;
@@ -82,19 +97,31 @@ public class SvnLogExtractor {
 	public List<SvnLog> extract() {
 		List<SvnLog> logList = new ArrayList<SvnLog>();
 		String baseName = FilenameUtils.getName(filePathToAnalyze);
+		File logsFolder = new File(outputFolder + LOGS_FOLDER_PATH);
 		File cmdFile = new File(outputFolder + String.format(CMD_FILE_PATH, limit, baseName));
 		String outputFilePath = outputFolder + String.format(LOG_FILE_PATH, limit, baseName);
-		String command = String.format(BY_LIMIT_CMD, limit, "\"" + filePathToAnalyze + "\"", outputFilePath);
+		File logOutputFile = new File(outputFilePath);
+		String command = String.format(BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
 		
 		try {
-			if (verbose)
-				System.out.println("Generating command file...");
-			FileUtils.writeStringToFile(cmdFile, command);
+			logsFolder.mkdirs();
+			if (executionMode == COMMAND_FILE) {
+				if (verbose)
+					System.out.println("Generating command file...");
+				FileUtils.writeStringToFile(cmdFile, command);
 
-			if (verbose)
-				System.out.println("Executing command file...");
-			CommandLineRunner runner = new CommandLineRunner();
-			runner.run(cmdFile.getAbsolutePath());
+				if (verbose)
+					System.out.println("Executing command file...");
+				CommandLineRunner runner = new CommandLineRunner();
+				runner.run(cmdFile.getAbsolutePath());
+
+			} else {
+
+				if (verbose)
+					System.out.println("Executing SVN log command...");
+				CommandLineRunner runner = new CommandLineRunner();
+				runner.executeCommand(command);
+			}
 
 			if (verbose)
 				System.out.println("Reading the log file...");
@@ -108,7 +135,10 @@ public class SvnLogExtractor {
 			e.printStackTrace();
 		} finally {
 			clear();
-			cmdFile.delete();
+			if (executionMode == COMMAND_FILE) {
+				cmdFile.delete();
+			}
+			logOutputFile.delete();
 		}
 
 		return logList;
@@ -173,5 +203,6 @@ public class SvnLogExtractor {
 		filePathToAnalyze = null;
 		limit = 0;
 		verbose = false;
+		executionMode = DIRECT_COMMAND;
 	}
 }
