@@ -45,7 +45,7 @@ public class CommandLineRunner {
 	public void executeCommand(String command) {
 		System.out.println("Executing command>" + command);
 		try {
-			Process process = Runtime.getRuntime().exec(command);
+			Process process = Runtime.getRuntime().exec(CMD_RUN_PREFIX + command);
 			process.waitFor();
 		} catch (IOException e) {
 			e.printStackTrace();
