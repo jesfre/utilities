@@ -11,7 +11,6 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.StringUtils;
 
 import com.blogspot.jesfre.commandline.CommandLineRunner;
 
@@ -46,17 +45,8 @@ public class SvnLogExtractor {
 	public enum CommandExecutionMode {
 		DIRECT_COMMAND, COMMAND_FILE;
 	}
-
-	// svn log --limit 999 "/path/to/file >> /path/to/output/file"
-	private static final String BY_LIMIT_CMD = "svn log --limit %d %s >> %s";
-	// svn log -r {2023-11-20}:{2024-01-29}
-	private static final String BY_DATE_RANGE_CMD = "svn log -r {{0}}:{{1}}";
-	private static final String CMD_FILE_PATH = "/svn-logs/svnlog_limit-%d-%s.cmd";
-	private static final String LOG_FILE_PATH = "/svn-logs/logs_limit-%d-%s.txt";
-	private static final String LOGS_FOLDER_PATH = "/svn-logs";
-	private static final String LOG_SEPARATOR = StringUtils.repeat("-", 72);
 	private static final int MAX_LIMIT = 100;
-
+	
 	private ExtractMode mode = ExtractMode.BY_LIMIT;
 	private CommandExecutionMode executionMode = DIRECT_COMMAND;
 	private String svnWorkDir;
@@ -97,11 +87,11 @@ public class SvnLogExtractor {
 	public List<SvnLog> extract() {
 		List<SvnLog> logList = new ArrayList<SvnLog>();
 		String baseName = FilenameUtils.getName(filePathToAnalyze);
-		File logsFolder = new File(outputFolder + LOGS_FOLDER_PATH);
-		File cmdFile = new File(outputFolder + String.format(CMD_FILE_PATH, limit, baseName));
-		String outputFilePath = outputFolder + String.format(LOG_FILE_PATH, limit, baseName);
+		File logsFolder = new File(outputFolder + SvnConstants.LOGS_FOLDER_PATH);
+		File cmdFile = new File(outputFolder + String.format(SvnConstants.CMD_FILE_PATH, limit, baseName));
+		String outputFilePath = outputFolder + String.format(SvnConstants.LOG_FILE_PATH, limit, baseName);
 		File logOutputFile = new File(outputFilePath);
-		String command = String.format(BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+		String command = String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
 		
 		try {
 			logsFolder.mkdirs();
@@ -160,7 +150,7 @@ public class SvnLogExtractor {
 		String commitTime = "";
 		StringBuilder comments = new StringBuilder();
 		for (String line : logLines) {
-			if (line.equals(LOG_SEPARATOR)) {
+			if (line.equals(SvnConstants.LOG_SEPARATOR)) {
 				if (linesInLog > 1) {
 					SvnLog log = new SvnLog(filePath, fileName, revision, ticket, committer, commitTime, comments.toString());
 					logs.add(log);
