@@ -31,30 +31,32 @@ public class SvnLogExtractor {
 				.extract();
 
 		new SvnLogExtractor(svnWorkDir, outFolder)
-				.withLimit(5)
+				.withComment("JIRATICKET123456")
 				.analyze(fileToAnalyze)
 				.verbosity(true)
-				.extractHead();
+				.clearTempFiles(false)
+				.extract();
 	}
 
 	private enum ExtractMode {
 		// TODO to make public in future to allow other extraction modes
-		BY_DATE_RANGE, BY_LIMIT;
+		BY_DATE_RANGE, BY_LIMIT, BY_COMMENT;
 	}
 
 	public enum CommandExecutionMode {
 		DIRECT_COMMAND, COMMAND_FILE;
 	}
-	private static final int MAX_LIMIT = 100;
-	
-	private ExtractMode mode = ExtractMode.BY_LIMIT;
+
+	private ExtractMode extractMode = ExtractMode.BY_LIMIT;
 	private CommandExecutionMode executionMode = DIRECT_COMMAND;
 	private String svnWorkDir;
 	private String outputFolder;
 
 	private String filePathToAnalyze;
 	private int limit;
+	private String comment;
 	private boolean verbose;
+	private boolean clearTempFiles = true;
 
 	public SvnLogExtractor(String svnWorkingDirectory, String outputFolder) {
 		this.svnWorkDir = svnWorkingDirectory;
@@ -66,11 +68,29 @@ public class SvnLogExtractor {
 		return this;
 	}
 
+	/**
+	 * Sets the limit and overrides the comment set with {@link #withComment(String)}
+	 * 
+	 * @param limit
+	 * @return
+	 */
 	public SvnLogExtractor withLimit(int limit) {
-		if(limit > MAX_LIMIT) {
-			this.limit = MAX_LIMIT;
-		}
 		this.limit = limit;
+		this.comment = null;
+		this.extractMode = ExtractMode.BY_LIMIT;
+		return this;
+	}
+
+	/**
+	 * Sets the commentToSearch and overrides the limit set with {@link #withLimit(int)}
+	 * 
+	 * @param commentToSearch
+	 * @return
+	 */
+	public SvnLogExtractor withComment(String commentToSearch) {
+		this.comment = commentToSearch;
+		this.limit = 0;
+		this.extractMode = ExtractMode.BY_COMMENT;
 		return this;
 	}
 
@@ -84,14 +104,19 @@ public class SvnLogExtractor {
 		return this;
 	}
 
+	public SvnLogExtractor clearTempFiles(boolean yesNo) {
+		this.clearTempFiles = yesNo;
+		return this;
+	}
+
 	public List<SvnLog> extract() {
 		List<SvnLog> logList = new ArrayList<SvnLog>();
 		String baseName = FilenameUtils.getName(filePathToAnalyze);
 		File logsFolder = new File(outputFolder + SvnConstants.LOGS_FOLDER_PATH);
-		File cmdFile = new File(outputFolder + String.format(SvnConstants.CMD_FILE_PATH, limit, baseName));
-		String outputFilePath = outputFolder + String.format(SvnConstants.LOG_FILE_PATH, limit, baseName);
+		File cmdFile = new File(outputFolder + String.format(SvnConstants.CMD_FILE_PATH, baseName));
+		String outputFilePath = outputFolder + String.format(SvnConstants.LOG_FILE_PATH, baseName);
 		File logOutputFile = new File(outputFilePath);
-		String command = String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+		String command = buildCommand(outputFilePath);
 		
 		try {
 			logsFolder.mkdirs();
@@ -125,10 +150,12 @@ public class SvnLogExtractor {
 			e.printStackTrace();
 		} finally {
 			clear();
-			if (executionMode == COMMAND_FILE) {
-				cmdFile.delete();
+			if (clearTempFiles) {
+				if (executionMode == COMMAND_FILE) {
+					cmdFile.delete();
+				}
+				logOutputFile.delete();
 			}
-			logOutputFile.delete();
 		}
 
 		return logList;
@@ -137,6 +164,17 @@ public class SvnLogExtractor {
 	public SvnLog extractHead() {
 		List<SvnLog> log = withLimit(1).extract();
 		return log.size() > 0 ? log.get(0) : SvnLog.EMPTY;
+	}
+
+	private String buildCommand(String outputFilePath) {
+		switch (extractMode) {
+		case BY_LIMIT:
+			return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+		case BY_COMMENT:
+			return String.format(SvnConstants.SVN_LOG_BY_COMMENT_CMD, comment, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+		default:
+			return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, 1, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+		}
 	}
 
 	private List<SvnLog> readLogs(String filePath, String fileName, String logFile) throws IOException {
@@ -191,8 +229,10 @@ public class SvnLogExtractor {
 
 	private void clear() {
 		filePathToAnalyze = null;
+		comment = null;
 		limit = 0;
 		verbose = false;
 		executionMode = DIRECT_COMMAND;
+		extractMode = ExtractMode.BY_LIMIT;
 	}
 }
