@@ -7,10 +7,12 @@ import static com.blogspot.jesfre.svn.utils.SvnLogExtractor.CommandExecutionMode
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 
 import com.blogspot.jesfre.commandline.CommandLineRunner;
 
@@ -33,7 +35,7 @@ public class SvnLogExtractor {
 		new SvnLogExtractor(svnWorkDir, outFolder)
 				.withComment("JIRATICKET123456")
 				.analyze(fileToAnalyze)
-				.verbosity(true)
+				.verbose(true)
 				.clearTempFiles(false)
 				.extract();
 	}
@@ -47,20 +49,33 @@ public class SvnLogExtractor {
 		DIRECT_COMMAND, COMMAND_FILE;
 	}
 
-	private ExtractMode extractMode = ExtractMode.BY_LIMIT;
-	private CommandExecutionMode executionMode = DIRECT_COMMAND;
 	private String svnWorkDir;
 	private String outputFolder;
 
+	private ExtractMode extractMode = ExtractMode.BY_LIMIT;
+	private CommandExecutionMode executionMode = DIRECT_COMMAND;
 	private String filePathToAnalyze;
 	private int limit;
 	private String comment;
 	private boolean verbose;
-	private boolean clearTempFiles = true;
+	private boolean exportLog;
+	private boolean clearTempFiles;
+
+	private void initializeState() {
+		executionMode = DIRECT_COMMAND;
+		extractMode = ExtractMode.BY_LIMIT;
+		filePathToAnalyze = null;
+		comment = null;
+		limit = 0;
+		verbose = false;
+		exportLog = false;
+		clearTempFiles = true;
+	}
 
 	public SvnLogExtractor(String svnWorkingDirectory, String outputFolder) {
 		this.svnWorkDir = svnWorkingDirectory;
 		this.outputFolder = outputFolder;
+		initializeState();
 	}
 
 	public SvnLogExtractor analyze(String filePath) {
@@ -99,8 +114,13 @@ public class SvnLogExtractor {
 		return this;
 	}
 
-	public SvnLogExtractor verbosity(boolean yesNo) {
+	public SvnLogExtractor verbose(boolean yesNo) {
 		this.verbose = yesNo;
+		return this;
+	}
+
+	public SvnLogExtractor exportLog(boolean yesNo) {
+		this.exportLog = yesNo;
 		return this;
 	}
 
@@ -117,9 +137,11 @@ public class SvnLogExtractor {
 		String outputFilePath = outputFolder + String.format(SvnConstants.LOG_FILE_PATH, baseName);
 		File logOutputFile = new File(outputFilePath);
 		String command = buildCommand(outputFilePath);
-		
+		String commandResults = null;
 		try {
-			logsFolder.mkdirs();
+			if (exportLog) {
+				logsFolder.mkdirs();
+			}
 			if (executionMode == COMMAND_FILE) {
 				if (verbose)
 					System.out.println("Generating command file...");
@@ -135,7 +157,8 @@ public class SvnLogExtractor {
 				if (verbose)
 					System.out.println("Executing SVN log command...");
 				CommandLineRunner runner = new CommandLineRunner();
-				runner.executeCommand(command);
+				runner.setVerbose(this.verbose);
+				commandResults = runner.executeCommand(command);
 			}
 
 			if (verbose)
@@ -143,18 +166,21 @@ public class SvnLogExtractor {
 
 			String folderPath = FilenameUtils.getPathNoEndSeparator(filePathToAnalyze);
 			String fileName = FilenameUtils.getName(filePathToAnalyze);
-			logList.addAll(readLogs(folderPath, fileName, outputFilePath));
+			logList.addAll(readLogs(folderPath, fileName, outputFilePath, commandResults));
 			if (verbose)
 				System.out.println("Done reading logs " + outputFilePath);
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			clear();
+			initializeState();
 			if (clearTempFiles) {
 				if (executionMode == COMMAND_FILE) {
 					cmdFile.delete();
 				}
-				logOutputFile.delete();
+				if (exportLog) {
+					logOutputFile.delete();
+					logsFolder.delete();
+				}
 			}
 		}
 
@@ -169,18 +195,35 @@ public class SvnLogExtractor {
 	private String buildCommand(String outputFilePath) {
 		switch (extractMode) {
 		case BY_LIMIT:
-			return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+			if (exportLog) {
+				return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+			} else {
+				return String.format(SvnConstants.SVN_LOG_BY_LIMIT_NO_EXPORT_CMD, limit, formatPath(filePathToAnalyze));
+			}
 		case BY_COMMENT:
-			return String.format(SvnConstants.SVN_LOG_BY_COMMENT_CMD, comment, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+			if (exportLog) {
+				return String.format(SvnConstants.SVN_LOG_BY_COMMENT_CMD, comment, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+			} else {
+				return String.format(SvnConstants.SVN_LOG_BY_COMMENT_NO_EXPORT_CMD, comment, formatPath(filePathToAnalyze));
+			}
 		default:
 			return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, 1, formatPath(filePathToAnalyze), formatPath(outputFilePath));
 		}
 	}
 
-	private List<SvnLog> readLogs(String filePath, String fileName, String logFile) throws IOException {
+	/**
+	 * Read the logs, either from the file in the given logFile path exportLog=true, or from theEntrie if exportLog=false
+	 */
+	private List<SvnLog> readLogs(String filePath, String fileName, String logFile, String logEntries) throws IOException {
 		List<SvnLog> logs = new ArrayList<SvnLog>();
 		// TODO read file using a buffer to avoid out-of-memory errors
-		List<String> logLines = FileUtils.readLines(new File(logFile));
+		List<String> logLines = null;
+		if (exportLog) {
+			logLines = FileUtils.readLines(new File(logFile));
+		} else {
+			logLines = Arrays.asList(StringUtils.split(logEntries, '\n'));
+		}
+
 		int linesInLog = 0;
 		long revision = 0;
 		String ticket = "";
@@ -188,7 +231,7 @@ public class SvnLogExtractor {
 		String commitTime = "";
 		StringBuilder comments = new StringBuilder();
 		for (String line : logLines) {
-			if (line.equals(SvnConstants.LOG_SEPARATOR)) {
+			if (line.trim().equals(SvnConstants.LOG_SEPARATOR)) {
 				if (linesInLog > 1) {
 					SvnLog log = new SvnLog(filePath, fileName, revision, ticket, committer, commitTime, comments.toString());
 					logs.add(log);
@@ -227,12 +270,4 @@ public class SvnLogExtractor {
 		return logs;
 	}
 
-	private void clear() {
-		filePathToAnalyze = null;
-		comment = null;
-		limit = 0;
-		verbose = false;
-		executionMode = DIRECT_COMMAND;
-		extractMode = ExtractMode.BY_LIMIT;
-	}
 }

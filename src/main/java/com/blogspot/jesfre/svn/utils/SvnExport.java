@@ -15,6 +15,7 @@ public class SvnExport {
 		String cmdExportCommand = getCommand(svnManagedFile, exportOutputFile);
 
 		CommandLineRunner runner = new CommandLineRunner();
+		runner.setVerbose(false);
 		runner.executeCommand(cmdExportCommand);
 		return exportOutputFile;
 	}

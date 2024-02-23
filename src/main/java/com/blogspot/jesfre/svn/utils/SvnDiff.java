@@ -9,6 +9,7 @@ public class SvnDiff {
 	public String exportDiff(String svnManagedFile, String diffOutputFile, long headRevision, long previousRevision) {
 		String svnDiffCommand = getCommand(svnManagedFile, diffOutputFile, headRevision, previousRevision);
 		CommandLineRunner runner = new CommandLineRunner();
+		runner.setVerbose(false);
 		runner.executeCommand(svnDiffCommand);
 		return diffOutputFile;
 	}

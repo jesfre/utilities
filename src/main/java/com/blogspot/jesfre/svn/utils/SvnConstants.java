@@ -9,9 +9,11 @@ public class SvnConstants {
 
 	// svn log --limit 999 "/path/to/file" >> "/path/to/output/file"
 	public static final String SVN_LOG_BY_LIMIT_CMD = "svn log --limit %d %s >> %s";
+	public static final String SVN_LOG_BY_LIMIT_NO_EXPORT_CMD = "svn log --limit %d %s";
 
 	// svn log --search "*comment*" "/path/to/file" >> /path/to/output/file"
 	public static final String SVN_LOG_BY_COMMENT_CMD = "svn log --search \"*%s*\" %s >> %s";
+	public static final String SVN_LOG_BY_COMMENT_NO_EXPORT_CMD = "svn log --search \"*%s*\" %s";
 
 	// svn log -r {2023-11-20}:{2024-01-29}
 	public static final String SVN_LOG_BY_DATE_RANGE_CMD = "svn log -r {{0}}:{{1}}";
