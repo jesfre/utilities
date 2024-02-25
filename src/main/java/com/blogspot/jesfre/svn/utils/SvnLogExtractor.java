@@ -27,11 +27,13 @@ public class SvnLogExtractor {
 		String outFolder = "path/to/output/folder//code-diff-generator";
 		String fileToAnalyze = "path/to/root/project/with/.svn/src/com/blogspot/jesfre/svnutils/MyClassToAnalyze.java";
 
+		System.out.println("Running test with limit 5.");
 		new SvnLogExtractor(svnWorkDir, outFolder)
 				.withLimit(5)
 				.analyze(fileToAnalyze)
 				.extract();
 
+		System.out.println("Running test with comment.");
 		new SvnLogExtractor(svnWorkDir, outFolder)
 				.withComment("JIRATICKET123456")
 				.analyze(fileToAnalyze)
@@ -124,6 +126,11 @@ public class SvnLogExtractor {
 		return this;
 	}
 
+	/**
+	 * Set clearing of files if {@link #exportLog} is set to true
+	 * @param yesNo
+	 * @return
+	 */
 	public SvnLogExtractor clearTempFiles(boolean yesNo) {
 		this.clearTempFiles = yesNo;
 		return this;
@@ -174,6 +181,8 @@ public class SvnLogExtractor {
 		} finally {
 			initializeState();
 			if (clearTempFiles) {
+				if (verbose)
+					System.out.println("Clearing files.");
 				if (executionMode == COMMAND_FILE) {
 					cmdFile.delete();
 				}
@@ -268,6 +277,33 @@ public class SvnLogExtractor {
 			}
 		}
 		return logs;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("SvnLogExtractor [svnWorkDir=");
+		builder.append(svnWorkDir);
+		builder.append(", outputFolder=");
+		builder.append(outputFolder);
+		builder.append(", extractMode=");
+		builder.append(extractMode);
+		builder.append(", executionMode=");
+		builder.append(executionMode);
+		builder.append(", filePathToAnalyze=");
+		builder.append(filePathToAnalyze);
+		builder.append(", limit=");
+		builder.append(limit);
+		builder.append(", comment=");
+		builder.append(comment);
+		builder.append(", verbose=");
+		builder.append(verbose);
+		builder.append(", exportLog=");
+		builder.append(exportLog);
+		builder.append(", clearTempFiles=");
+		builder.append(clearTempFiles);
+		builder.append("]");
+		return builder.toString();
 	}
 
 }
