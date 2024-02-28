@@ -111,6 +111,11 @@ public class SvnLogExtractor {
 		return this;
 	}
 
+	/**
+	 * {@link CommandExecutionMode#COMMAND_FILE} execution mode runs with {@link #exportLog(boolean)} to true
+	 * @param executionMode
+	 * @return
+	 */
 	public SvnLogExtractor withExecutionMode(CommandExecutionMode executionMode) {
 		this.executionMode = executionMode;
 		return this;
@@ -137,6 +142,9 @@ public class SvnLogExtractor {
 	}
 
 	public List<SvnLog> extract() {
+		if(this.executionMode == COMMAND_FILE) {
+			this.exportLog = true;
+		}
 		List<SvnLog> logList = new ArrayList<SvnLog>();
 		String baseName = FilenameUtils.getName(filePathToAnalyze);
 		File logsFolder = new File(outputFolder + SvnConstants.LOGS_FOLDER_PATH);
