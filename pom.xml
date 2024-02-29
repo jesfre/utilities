@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.blogspot.jesfre</groupId>
 	<artifactId>utilities</artifactId>
-	<version>0.6</version>
+	<version>1.0</version>
 
 	<dependencies>
 		<dependency>
@@ -36,4 +36,12 @@
 			</plugin>
 		</plugins>
 	</build>
+	
+	<distributionManagement>
+		<repository>
+			<id>github</id>
+			<name>GitHub jesfre Apache Maven Packages</name>
+			<url>https://maven.pkg.github.com/jesfre/utilities</url>
+		</repository>
+	</distributionManagement>
 </project>
