@@ -3,6 +3,7 @@ package com.blogspot.jesfre.svn.utils;
 import org.apache.commons.lang.StringUtils;
 
 import com.blogspot.jesfre.commandline.CommandLineRunner;
+import com.blogspot.jesfre.svn.SvnConstants;
 
 public class SvnExport {
 

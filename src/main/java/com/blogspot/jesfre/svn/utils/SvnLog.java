@@ -1,5 +1,10 @@
 package com.blogspot.jesfre.svn.utils;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.blogspot.jesfre.svn.ModifiedFile;
+
 /**
  * @author <a href="mailto:jorge.ruiz.aquino@gmail.com">Jorge Ruiz Aquino</a>
  *         Feb 10, 2024
@@ -15,6 +20,7 @@ public class SvnLog {
 	private String commitTime;
 	private String ticket;
 	private String comment;
+	private List<ModifiedFile> modifiedFiles = new ArrayList<ModifiedFile>();
 
 	SvnLog(String fileLocation, String fileName, long revision, String committer, String commitTime, String ticket, String comment) {
 		super();
@@ -82,6 +88,10 @@ public class SvnLog {
 	public void setComment(String comment) {
 		this.comment = comment;
 	}
+	
+	public List<ModifiedFile> getModifiedFiles() {
+		return modifiedFiles;
+	}
 
 	@Override
 	public String toString() {
@@ -100,6 +110,10 @@ public class SvnLog {
 		builder.append(ticket);
 		builder.append(", comment=");
 		builder.append(comment);
+		if(modifiedFiles.size() > 0) {
+			builder.append(", fileList=");
+			builder.append(modifiedFiles);
+		}
 		builder.append("]");
 		return builder.toString();
 	}

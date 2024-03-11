@@ -6,6 +6,8 @@ import static com.blogspot.jesfre.svn.utils.SvnLogExtractor.CommandExecutionMode
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +17,9 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 
 import com.blogspot.jesfre.commandline.CommandLineRunner;
+import com.blogspot.jesfre.svn.ModifiedFile;
+import com.blogspot.jesfre.svn.OperationType;
+import com.blogspot.jesfre.svn.SvnConstants;
 
 /**
  * @author <a href="mailto:jorge.ruiz.aquino@gmail.com">Jorge Ruiz Aquino</a>
@@ -22,7 +27,7 @@ import com.blogspot.jesfre.commandline.CommandLineRunner;
  */
 public class SvnLogExtractor {
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws MalformedURLException {
 		String svnWorkDir = "path/to/root/project/with/.svn";
 		String outFolder = "path/to/output/folder//code-diff-generator";
 		String fileToAnalyze = "path/to/root/project/with/.svn/src/com/blogspot/jesfre/svnutils/MyClassToAnalyze.java";
@@ -40,6 +45,15 @@ public class SvnLogExtractor {
 				.verbose(true)
 				.clearTempFiles(false)
 				.extract();
+		
+		System.out.println("Running test with comment to URL");
+		new SvnLogExtractor(svnWorkDir, outFolder)
+				.withComment("JIRATICKET123456")
+				.analyzeUrl(new URL("http://svn/URL/branches/phase1/sources"))
+				.verbose(true)
+				.clearTempFiles(true)
+				.listModifiedFiles(true)
+				.extract();
 	}
 
 	private enum ExtractMode {
@@ -50,27 +64,37 @@ public class SvnLogExtractor {
 	public enum CommandExecutionMode {
 		DIRECT_COMMAND, COMMAND_FILE;
 	}
+	
+	public enum Analyzing {
+		LOCAL_FILE, REPO_URL;
+	}
 
 	private String svnWorkDir;
 	private String outputFolder;
 
 	private ExtractMode extractMode = ExtractMode.BY_LIMIT;
 	private CommandExecutionMode executionMode = DIRECT_COMMAND;
+	private Analyzing analyzing = Analyzing.LOCAL_FILE;
 	private String filePathToAnalyze;
+	private URL urlToAnalyze;
 	private int limit;
 	private String comment;
 	private boolean verbose;
 	private boolean exportLog;
+	private boolean listModifiedFiles;
 	private boolean clearTempFiles;
 
 	private void initializeState() {
 		executionMode = DIRECT_COMMAND;
 		extractMode = ExtractMode.BY_LIMIT;
+		analyzing = Analyzing.LOCAL_FILE;
 		filePathToAnalyze = null;
+		urlToAnalyze = null;
 		comment = null;
 		limit = 0;
 		verbose = false;
 		exportLog = false;
+		listModifiedFiles = false;
 		clearTempFiles = true;
 	}
 
@@ -80,8 +104,20 @@ public class SvnLogExtractor {
 		initializeState();
 	}
 
+	/**
+	 * Sets a path to a local directory file. Overrides {@link #analyzeUrl(URL)}
+	 * @param filePath
+	 * @return
+	 */
 	public SvnLogExtractor analyze(String filePath) {
 		filePathToAnalyze = filePath;
+		analyzing = Analyzing.LOCAL_FILE;
+		return this;
+	}
+	
+	public SvnLogExtractor analyzeUrl(URL svnPath) {
+		urlToAnalyze = svnPath;
+		analyzing = Analyzing.REPO_URL;
 		return this;
 	}
 
@@ -130,6 +166,11 @@ public class SvnLogExtractor {
 		this.exportLog = yesNo;
 		return this;
 	}
+	
+	public SvnLogExtractor listModifiedFiles(boolean yesNo) {
+		this.listModifiedFiles = yesNo;
+		return this;
+	}
 
 	/**
 	 * Set clearing of files if {@link #exportLog} is set to true
@@ -145,14 +186,21 @@ public class SvnLogExtractor {
 		if(this.executionMode == COMMAND_FILE) {
 			this.exportLog = true;
 		}
+		
+		String resourceToanalyze = filePathToAnalyze;
+		if(analyzing == Analyzing.REPO_URL) {
+			resourceToanalyze = urlToAnalyze.toString();
+		}
+		
 		List<SvnLog> logList = new ArrayList<SvnLog>();
-		String baseName = FilenameUtils.getName(filePathToAnalyze);
+		String baseName = FilenameUtils.getName(resourceToanalyze);
 		File logsFolder = new File(outputFolder + SvnConstants.LOGS_FOLDER_PATH);
 		File cmdFile = new File(outputFolder + String.format(SvnConstants.CMD_FILE_PATH, baseName));
 		String outputFilePath = outputFolder + String.format(SvnConstants.LOG_FILE_PATH, baseName);
 		File logOutputFile = new File(outputFilePath);
-		String command = buildCommand(outputFilePath);
+		String command = buildCommand(outputFilePath, resourceToanalyze);
 		String commandResults = null;
+		
 		try {
 			if (exportLog) {
 				logsFolder.mkdirs();
@@ -179,8 +227,8 @@ public class SvnLogExtractor {
 			if (verbose)
 				System.out.println("Reading the log file...");
 
-			String folderPath = FilenameUtils.getPathNoEndSeparator(filePathToAnalyze);
-			String fileName = FilenameUtils.getName(filePathToAnalyze);
+			String folderPath = FilenameUtils.getPathNoEndSeparator(resourceToanalyze);
+			String fileName = FilenameUtils.getName(resourceToanalyze);
 			logList.addAll(readLogs(folderPath, fileName, outputFilePath, commandResults));
 			if (verbose)
 				System.out.println("Done reading logs " + outputFilePath);
@@ -200,7 +248,6 @@ public class SvnLogExtractor {
 				}
 			}
 		}
-
 		return logList;
 	}
 
@@ -209,22 +256,29 @@ public class SvnLogExtractor {
 		return log.size() > 0 ? log.get(0) : SvnLog.EMPTY;
 	}
 
-	private String buildCommand(String outputFilePath) {
+	private String buildCommand(String outputFilePath, String url) {
+		if(analyzing == Analyzing.LOCAL_FILE) {
+			url = formatPath(url);
+		}
+		StringBuilder options = new StringBuilder();
+		if(listModifiedFiles) {
+			options.append(SvnConstants.LOG_OPT_VERBOSE).append(" ");
+		}
 		switch (extractMode) {
 		case BY_LIMIT:
 			if (exportLog) {
-				return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, limit, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+				return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, options.toString(), limit, url, formatPath(outputFilePath));
 			} else {
-				return String.format(SvnConstants.SVN_LOG_BY_LIMIT_NO_EXPORT_CMD, limit, formatPath(filePathToAnalyze));
+				return String.format(SvnConstants.SVN_LOG_BY_LIMIT_NO_EXPORT_CMD, options.toString(), limit, url);
 			}
 		case BY_COMMENT:
 			if (exportLog) {
-				return String.format(SvnConstants.SVN_LOG_BY_COMMENT_CMD, comment, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+				return String.format(SvnConstants.SVN_LOG_BY_COMMENT_CMD, options.toString(), comment, url, formatPath(outputFilePath));
 			} else {
-				return String.format(SvnConstants.SVN_LOG_BY_COMMENT_NO_EXPORT_CMD, comment, formatPath(filePathToAnalyze));
+				return String.format(SvnConstants.SVN_LOG_BY_COMMENT_NO_EXPORT_CMD, options.toString(), comment, url);
 			}
 		default:
-			return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, 1, formatPath(filePathToAnalyze), formatPath(outputFilePath));
+			return String.format(SvnConstants.SVN_LOG_BY_LIMIT_CMD, options.toString(), 1, url, formatPath(outputFilePath));
 		}
 	}
 
@@ -247,10 +301,18 @@ public class SvnLogExtractor {
 		String committer = "";
 		String commitTime = "";
 		StringBuilder comments = new StringBuilder();
+		List<String> committedFiles = new ArrayList<String>();
+		boolean readingFiles = false;
 		for (String line : logLines) {
 			if (line.trim().equals(SvnConstants.LOG_SEPARATOR)) {
 				if (linesInLog > 1) {
 					SvnLog log = new SvnLog(filePath, fileName, revision, ticket, committer, commitTime, comments.toString());
+					for(String cf : committedFiles) {
+						char op = cf.trim().charAt(0);
+						String file = cf.trim().substring(2);
+						OperationType ot = OperationType.getOperationType(op);
+						log.getModifiedFiles().add(new ModifiedFile(ot, file));
+					}
 					logs.add(log);
 				}
 
@@ -261,6 +323,8 @@ public class SvnLogExtractor {
 				committer = "";
 				commitTime = "";
 				comments.setLength(0);
+				readingFiles = false;
+				committedFiles.clear();
 				continue;
 			}
 			linesInLog++;
@@ -272,12 +336,26 @@ public class SvnLogExtractor {
 				committer = tokens[1].trim();
 				commitTime = tokens[2].trim();
 				
-			} else if (linesInLog > 2) {
-				// line 2 is an empty line
-				if(linesInLog == 3) {
-					ticket = line.substring(0, line.indexOf(' '));
+			} else if (linesInLog > 1) {
+				if(linesInLog == 2 && line.startsWith(SvnConstants.LOG_CHANGED_PATHS_START)) {
+					readingFiles = true;
+					continue;
 				}
+				
+				if(readingFiles && StringUtils.isNotBlank(line)) {
+					// Read file
+					committedFiles.add(line);
+					continue;
+				}
+				
+				if(readingFiles && StringUtils.isBlank(line)) {
+					// Separator before comment is a blank line
+					readingFiles = false;
+					continue;
+				}
+				
 				// Comments
+				ticket = line.substring(0, line.indexOf(' '));
 				if (comments.length() > 0) {
 					comments.append("\n");
 				}
