@@ -6,6 +6,12 @@ import com.blogspot.jesfre.commandline.CommandLineRunner;
 import com.blogspot.jesfre.svn.SvnConstants;
 
 public class SvnExport {
+	private boolean verbose;
+
+	public SvnExport verbose(boolean yesNo) {
+	this.verbose = yesNo;
+	return this;
+	}
 
 	/**
 	 * @param svnManagedFile
@@ -16,7 +22,7 @@ public class SvnExport {
 		String cmdExportCommand = getCommand(svnManagedFile, exportOutputFile);
 
 		CommandLineRunner runner = new CommandLineRunner();
-		runner.setVerbose(false);
+		runner.setVerbose(verbose);
 		runner.executeCommand(cmdExportCommand);
 		return exportOutputFile;
 	}
