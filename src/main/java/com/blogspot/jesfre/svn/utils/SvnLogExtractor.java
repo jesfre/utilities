@@ -292,7 +292,7 @@ public class SvnLogExtractor {
 		if (exportLog) {
 			logLines = FileUtils.readLines(new File(logFile));
 		} else {
-			logLines = Arrays.asList(StringUtils.split(logEntries, '\n'));
+			logLines = Arrays.asList(StringUtils.split(logEntries, "\r\n"));
 		}
 
 		int linesInLog = 0;
@@ -306,7 +306,7 @@ public class SvnLogExtractor {
 		for (String line : logLines) {
 			if (line.trim().equals(SvnConstants.LOG_SEPARATOR)) {
 				if (linesInLog > 1) {
-					SvnLog log = new SvnLog(filePath, fileName, revision, ticket, committer, commitTime, comments.toString());
+					SvnLog log = new SvnLog(filePath, fileName, revision, committer, commitTime, ticket, comments.toString());
 					for(String cf : committedFiles) {
 						char op = cf.trim().charAt(0);
 						String file = cf.trim().substring(2);
