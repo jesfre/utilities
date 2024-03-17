@@ -29,7 +29,7 @@ import com.blogspot.jesfre.svn.SvnConstants;
  *         Feb 10, 2024
  */
 public class SvnLogExtractor {
-	
+
 	public static void main(String[] args) throws MalformedURLException {
 		String svnWorkDir = "path/to/root/project/with/.svn";
 		String outFolder = "path/to/output/folder//code-diff-generator";
@@ -67,7 +67,7 @@ public class SvnLogExtractor {
 	public enum CommandExecutionMode {
 		DIRECT_COMMAND, COMMAND_FILE;
 	}
-	
+
 	public enum Analyzing {
 		LOCAL_FILE, REPO_URL;
 	}
@@ -118,7 +118,7 @@ public class SvnLogExtractor {
 		analyzing = Analyzing.LOCAL_FILE;
 		return this;
 	}
-	
+
 	public SvnLogExtractor analyzeUrl(URL svnPath) {
 		urlToAnalyze = svnPath;
 		analyzing = Analyzing.REPO_URL;
@@ -137,12 +137,12 @@ public class SvnLogExtractor {
 		this.extractMode = ExtractMode.BY_LIMIT;
 		return this;
 	}
-	
+
 	/**
-	* Sets a number of months in the past from the current to search for commits
-	* @param monthsLimit
-	* @return
-	*/
+	 * Sets a number of months in the past from the current to search for commits
+	 * @param monthsLimit
+	 * @return
+	 */
 	public SvnLogExtractor lookMonthsBack(int monthsLimit) {
 		if(monthsLimit < 0) {
 			monthsLimit = 0;
@@ -183,7 +183,7 @@ public class SvnLogExtractor {
 		this.exportLog = yesNo;
 		return this;
 	}
-	
+
 	public SvnLogExtractor listModifiedFiles(boolean yesNo) {
 		this.listModifiedFiles = yesNo;
 		return this;
@@ -203,12 +203,12 @@ public class SvnLogExtractor {
 		if(this.executionMode == COMMAND_FILE) {
 			this.exportLog = true;
 		}
-		
+
 		String resourceToanalyze = filePathToAnalyze;
 		if(analyzing == Analyzing.REPO_URL) {
 			resourceToanalyze = urlToAnalyze.toString();
 		}
-		
+
 		List<SvnLog> logList = new ArrayList<SvnLog>();
 		String baseName = FilenameUtils.getName(resourceToanalyze);
 		File logsFolder = new File(outputFolder + SvnConstants.LOGS_FOLDER_PATH);
@@ -217,7 +217,7 @@ public class SvnLogExtractor {
 		File logOutputFile = new File(outputFilePath);
 		String command = buildCommand(outputFilePath, resourceToanalyze);
 		String commandResults = null;
-		
+
 		try {
 			if (exportLog) {
 				logsFolder.mkdirs();
@@ -364,25 +364,25 @@ public class SvnLogExtractor {
 				revision = Long.parseLong(revString);
 				committer = tokens[1].trim();
 				commitTime = tokens[2].trim();
-				
+
 			} else if (linesInLog > 1) {
 				if(linesInLog == 2 && line.startsWith(SvnConstants.LOG_CHANGED_PATHS_START)) {
 					readingFiles = true;
 					continue;
 				}
-				
+
 				if(readingFiles && StringUtils.isNotBlank(line)) {
 					// Read file
 					committedFiles.add(line);
 					continue;
 				}
-				
+
 				if(readingFiles && StringUtils.isBlank(line)) {
 					// Separator before comment is a blank line
 					readingFiles = false;
 					continue;
 				}
-				
+
 				// Comments
 				ticket = line.substring(0, line.indexOf(' '));
 				if (comments.length() > 0) {
