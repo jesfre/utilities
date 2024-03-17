@@ -228,27 +228,31 @@ public class SvnLogExtractor {
 				FileUtils.writeStringToFile(cmdFile, command);
 
 				if (verbose)
-					System.out.println("Executing command file...");
+					System.out.println("Executing command file... " + new Date());
 				CommandLineRunner runner = new CommandLineRunner();
 				runner.run(cmdFile.getAbsolutePath());
-
+				if (verbose)
+					System.out.println("Executed command file... " + new Date());
 			} else {
 
 				if (verbose)
-					System.out.println("Executing SVN log command...");
+					System.out.println("Executing SVN log command... " + new Date());
 				CommandLineRunner runner = new CommandLineRunner();
 				runner.setVerbose(this.verbose);
 				commandResults = runner.executeCommand(command);
+				if (verbose)
+					System.out.println("Executed SVN log command... " + new Date());
 			}
-
-			if (verbose)
-				System.out.println("Reading the log file...");
 
 			String folderPath = FilenameUtils.getPathNoEndSeparator(resourceToanalyze);
 			String fileName = FilenameUtils.getName(resourceToanalyze);
+
+			if (verbose)
+				System.out.println(analyzing == Analyzing.REPO_URL ? "Reading logs" : "Reading the log file " + outputFilePath);
+
 			logList.addAll(readLogs(folderPath, fileName, outputFilePath, commandResults));
 			if (verbose)
-				System.out.println("Done reading logs " + outputFilePath);
+				System.out.println(analyzing == Analyzing.REPO_URL ? "Done reading logs." : "Done reading log.");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
