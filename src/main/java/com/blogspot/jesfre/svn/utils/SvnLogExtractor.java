@@ -8,13 +8,16 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.time.DateUtils;
 
 import com.blogspot.jesfre.commandline.CommandLineRunner;
 import com.blogspot.jesfre.svn.ModifiedFile;
@@ -78,6 +81,7 @@ public class SvnLogExtractor {
 	private String filePathToAnalyze;
 	private URL urlToAnalyze;
 	private int limit;
+	private int monthsLimit;
 	private String comment;
 	private boolean verbose;
 	private boolean exportLog;
@@ -131,6 +135,19 @@ public class SvnLogExtractor {
 		this.limit = limit;
 		this.comment = null;
 		this.extractMode = ExtractMode.BY_LIMIT;
+		return this;
+	}
+	
+	/**
+	* Sets a number of months in the past from the current to search for commits
+	* @param monthsLimit
+	* @return
+	*/
+	public SvnLogExtractor lookMonthsBack(int monthsLimit) {
+		if(monthsLimit < 0) {
+			monthsLimit = 0;
+		}
+		this.monthsLimit = monthsLimit;
 		return this;
 	}
 
@@ -263,6 +280,14 @@ public class SvnLogExtractor {
 		StringBuilder options = new StringBuilder();
 		if(listModifiedFiles) {
 			options.append(SvnConstants.LOG_OPT_VERBOSE).append(" ");
+		}
+		if(monthsLimit > 0) {
+			// Always extract logs in descending order
+			Date today = new Date();
+			Date thePast = DateUtils.addMonths(today, -monthsLimit);
+			String dateEnd = new SimpleDateFormat("yyyy-MM-dd").format(today);
+			String dateStart = new SimpleDateFormat("yyyy-MM-dd").format(thePast);
+			options.append(SvnConstants.LOG_OPT_DATE_RANGE.replaceFirst("DATE_END", dateEnd).replaceFirst("DATE_START", dateStart)).append(" ");
 		}
 		switch (extractMode) {
 		case BY_LIMIT:

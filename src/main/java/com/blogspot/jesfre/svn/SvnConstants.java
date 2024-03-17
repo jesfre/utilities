@@ -9,6 +9,7 @@ public class SvnConstants {
 	public static final String SVN_EXPORT_REV_CMD_TEMPLATE = "svn export OPT1 -r REVISION URL_FILE EXPORTED_JAVA_FILEPATH";
 
 	public static final String LOG_OPT_VERBOSE = "-v";
+	public static final String LOG_OPT_DATE_RANGE = "-r {DATE_END}:{DATE_START}";
 	public static final String EXPORT_OPT_FORCE = "--force";
 
 	// svn log --limit 999 "/path/to/file" >> "/path/to/output/file"
