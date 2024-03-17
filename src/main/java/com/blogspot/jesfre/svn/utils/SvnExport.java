@@ -7,9 +7,15 @@ import com.blogspot.jesfre.svn.SvnConstants;
 
 public class SvnExport {
 	private boolean verbose;
+	private boolean overwriteFile;
 
 	public SvnExport verbose(boolean yesNo) {
 		this.verbose = yesNo;
+		return this;
+	}
+
+	public SvnExport overwriteFile(boolean yesNo) {
+		this.overwriteFile = yesNo;
 		return this;
 	}
 
@@ -53,6 +59,7 @@ public class SvnExport {
 	public String getCommand(String svnManagedFile, String exportOutputFile) {
 		String cmdExportCommand = StringUtils.replace(SvnConstants.SVN_EXPORT_CMD_TEMPLATE, "URL_FILE", svnManagedFile);
 		cmdExportCommand = StringUtils.replace(cmdExportCommand, "EXPORTED_JAVA_FILEPATH", exportOutputFile);
+		cmdExportCommand = StringUtils.replace(cmdExportCommand, "OPT1", overwriteFile ? SvnConstants.EXPORT_OPT_FORCE : "");
 		return cmdExportCommand;
 	}
 
@@ -66,6 +73,7 @@ public class SvnExport {
 	public String getCommand(long revision, String svnManagedFile, String exportOutputFile) {
 		String cmdExportCommand = StringUtils.replace(SvnConstants.SVN_EXPORT_REV_CMD_TEMPLATE, "URL_FILE", svnManagedFile);
 		cmdExportCommand = StringUtils.replace(cmdExportCommand, "EXPORTED_JAVA_FILEPATH", exportOutputFile);
+		cmdExportCommand = StringUtils.replace(cmdExportCommand, "OPT1", overwriteFile ? SvnConstants.EXPORT_OPT_FORCE : "");
 		cmdExportCommand = StringUtils.replace(cmdExportCommand, "REVISION", String.valueOf(revision));
 		return cmdExportCommand;
 	}

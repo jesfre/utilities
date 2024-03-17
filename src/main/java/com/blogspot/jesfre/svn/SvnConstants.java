@@ -5,10 +5,11 @@ import org.apache.commons.lang.StringUtils;
 public class SvnConstants {
 
 	public static final String SVN_DIFF_CMD_TEMPLATE = "svn diff -r HEAD:PREV_REV SVN_REPO_FILE_LOCATION > OUTPUT_DIFF_FILE";
-	public static final String SVN_EXPORT_CMD_TEMPLATE = "svn export URL_FILE EXPORTED_JAVA_FILEPATH";
-	public static final String SVN_EXPORT_REV_CMD_TEMPLATE = "svn export -r REVISION URL_FILE EXPORTED_JAVA_FILEPATH";
+	public static final String SVN_EXPORT_CMD_TEMPLATE = "svn export OPT1 URL_FILE EXPORTED_JAVA_FILEPATH";
+	public static final String SVN_EXPORT_REV_CMD_TEMPLATE = "svn export OPT1 -r REVISION URL_FILE EXPORTED_JAVA_FILEPATH";
 
 	public static final String LOG_OPT_VERBOSE = "-v";
+	public static final String EXPORT_OPT_FORCE = "--force";
 
 	// svn log --limit 999 "/path/to/file" >> "/path/to/output/file"
 	public static final String SVN_LOG_BY_LIMIT_CMD = "svn log %s --limit %d %s >> %s";
