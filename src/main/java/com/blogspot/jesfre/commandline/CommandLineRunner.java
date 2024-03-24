@@ -60,24 +60,20 @@ public class CommandLineRunner {
 		if(verbose) {
 			System.out.println("Executing command>" + command);
 		}
+		String result = "";
 		Process process = null;
 		try {
 			process = Runtime.getRuntime().exec(CMD_RUN_PREFIX + command);
+			result = getStdInOut2(process);
 			process.waitFor();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
-			if (process != null) {
-				try {
-					return getStdInOut2(process);
-				} catch (Exception e) {
-					System.out.println("Error while trying to print out execution results.");
-				}
-			}
+			process.destroy();
 		}
-		return "";
+		return result;
 	}
 
 	private String getStdInOut(Process proc) throws IOException {
