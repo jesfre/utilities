@@ -10,9 +10,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
 /**
- * @author <a href="mailto:jorge.ruiz.aquino@gmail.com">Jorge Ruiz Aquino</a>
- * Feb 13, 2024
- */
+ * @author <a href="mailto:jorge.ruiz.aquino@gmail.com">Jorge Ruiz Aquino</a>
+ *         Feb 13, 2024
+ */
 public class CommandLineRunner {
 
 	private enum Mode {
@@ -22,9 +22,9 @@ public class CommandLineRunner {
 	private static final String CMD_RUN_PREFIX = "cmd /c ";
 	// TODO change mode to Unix
 	private static final Mode DEFAULT_MODE = Mode.WINDOWS;
-	
+
 	private boolean verbose;
-	
+
 	public void setVerbose(boolean verbose) {
 		this.verbose = verbose;
 	}
