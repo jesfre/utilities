@@ -37,26 +37,26 @@ public class SvnLogExtractor {
 
 		System.out.println("Running test with limit 5.");
 		new SvnLogExtractor(svnWorkDir, outFolder)
-				.withLimit(5)
-				.analyze(fileToAnalyze)
-				.extract();
+		.withLimit(5)
+		.analyze(fileToAnalyze)
+		.extract();
 
 		System.out.println("Running test with comment.");
 		new SvnLogExtractor(svnWorkDir, outFolder)
-				.withComment("JIRATICKET123456")
-				.analyze(fileToAnalyze)
-				.verbose(true)
-				.clearTempFiles(false)
-				.extract();
-		
+		.withComment("JIRATICKET123456")
+		.analyze(fileToAnalyze)
+		.verbose(true)
+		.clearTempFiles(false)
+		.extract();
+
 		System.out.println("Running test with comment to URL");
 		new SvnLogExtractor(svnWorkDir, outFolder)
-				.withComment("JIRATICKET123456")
-				.analyzeUrl(new URL("http://svn/URL/branches/phase1/sources"))
-				.verbose(true)
-				.clearTempFiles(true)
-				.listModifiedFiles(true)
-				.extract();
+		.withComment("JIRATICKET123456")
+		.analyzeUrl(new URL("http://svn/URL/branches/phase1/sources"))
+		.verbose(true)
+		.clearTempFiles(true)
+		.listModifiedFiles(true)
+		.extract();
 	}
 
 	private enum ExtractMode {
@@ -287,7 +287,7 @@ public class SvnLogExtractor {
 		}
 		if(monthsLimit > 0) {
 			// Always extract logs in descending order
-			Date today = new Date();
+			Date today = DateUtils.addDays(new Date(), 1);
 			Date thePast = DateUtils.addMonths(today, -monthsLimit);
 			String dateEnd = new SimpleDateFormat("yyyy-MM-dd").format(today);
 			String dateStart = new SimpleDateFormat("yyyy-MM-dd").format(thePast);
@@ -311,114 +311,114 @@ public class SvnLogExtractor {
 		}
 	}
 
-	/**
-	 * Read the logs, either from the file in the given logFile path exportLog=true, or from theEntrie if exportLog=false
-	 */
-	private List<SvnLog> readLogs(String filePath, String fileName, String logFile, String logEntries) throws IOException {
-		List<SvnLog> logs = new ArrayList<SvnLog>();
-		// TODO read file using a buffer to avoid out-of-memory errors
-		List<String> logLines = null;
-		if (exportLog) {
-			logLines = FileUtils.readLines(new File(logFile));
-		} else {
-			logLines = Arrays.asList(StringUtils.split(logEntries, "\r\n"));
-		}
+		/**
+		 * Read the logs, either from the file in the given logFile path exportLog=true, or from theEntrie if exportLog=false
+		 */
+		private List<SvnLog> readLogs(String filePath, String fileName, String logFile, String logEntries) throws IOException {
+			List<SvnLog> logs = new ArrayList<SvnLog>();
+			// TODO read file using a buffer to avoid out-of-memory errors
+			List<String> logLines = null;
+			if (exportLog) {
+				logLines = FileUtils.readLines(new File(logFile));
+			} else {
+				logLines = Arrays.asList(StringUtils.split(logEntries, "\r\n"));
+			}
 
-		int linesInLog = 0;
-		long revision = 0;
-		String ticket = "";
-		String committer = "";
-		String commitTime = "";
-		StringBuilder comments = new StringBuilder();
-		List<String> committedFiles = new ArrayList<String>();
-		boolean readingFiles = false;
-		for (String line : logLines) {
-			if (line.trim().equals(SvnConstants.LOG_SEPARATOR)) {
-				if (linesInLog > 1) {
-					SvnLog log = new SvnLog(filePath, fileName, revision, committer, commitTime, ticket, comments.toString());
-					for(String cf : committedFiles) {
-						char op = cf.trim().charAt(0);
-						String file = cf.trim().substring(2);
-						OperationType ot = OperationType.getOperationType(op);
-						log.getModifiedFiles().add(new ModifiedFile(ot, file));
+			int linesInLog = 0;
+			long revision = 0;
+			String ticket = "";
+			String committer = "";
+			String commitTime = "";
+			StringBuilder comments = new StringBuilder();
+			List<String> committedFiles = new ArrayList<String>();
+			boolean readingFiles = false;
+			for (String line : logLines) {
+				if (line.trim().equals(SvnConstants.LOG_SEPARATOR)) {
+					if (linesInLog > 1) {
+						SvnLog log = new SvnLog(filePath, fileName, revision, committer, commitTime, ticket, comments.toString());
+						for(String cf : committedFiles) {
+							char op = cf.trim().charAt(0);
+							String file = cf.trim().substring(2);
+							OperationType ot = OperationType.getOperationType(op);
+							log.getModifiedFiles().add(new ModifiedFile(ot, file));
+						}
+						logs.add(log);
 					}
-					logs.add(log);
-				}
 
-				// New log file init
-				linesInLog = 0;
-				revision = 0;
-				ticket = "";
-				committer = "";
-				commitTime = "";
-				comments.setLength(0);
-				readingFiles = false;
-				committedFiles.clear();
-				continue;
-			}
-			linesInLog++;
-
-			if (linesInLog == 1) {
-				String[] tokens = line.split("\\|");
-				String revString = tokens[0].trim().substring(1);
-				revision = Long.parseLong(revString);
-				committer = tokens[1].trim();
-				commitTime = tokens[2].trim();
-
-			} else if (linesInLog > 1) {
-				if(linesInLog == 2 && line.startsWith(SvnConstants.LOG_CHANGED_PATHS_START)) {
-					readingFiles = true;
-					continue;
-				}
-
-				if(readingFiles && StringUtils.isNotBlank(line)) {
-					// Read file
-					committedFiles.add(line);
-					continue;
-				}
-
-				if(readingFiles && StringUtils.isBlank(line)) {
-					// Separator before comment is a blank line
+					// New log file init
+					linesInLog = 0;
+					revision = 0;
+					ticket = "";
+					committer = "";
+					commitTime = "";
+					comments.setLength(0);
 					readingFiles = false;
+					committedFiles.clear();
 					continue;
 				}
+				linesInLog++;
 
-				// Comments
-				ticket = line.substring(0, line.indexOf(' '));
-				if (comments.length() > 0) {
-					comments.append("\n");
+				if (linesInLog == 1) {
+					String[] tokens = line.split("\\|");
+					String revString = tokens[0].trim().substring(1);
+					revision = Long.parseLong(revString);
+					committer = tokens[1].trim();
+					commitTime = tokens[2].trim();
+
+				} else if (linesInLog > 1) {
+					if(linesInLog == 2 && line.startsWith(SvnConstants.LOG_CHANGED_PATHS_START)) {
+						readingFiles = true;
+						continue;
+					}
+
+					if(readingFiles && StringUtils.isNotBlank(line)) {
+						// Read file
+						committedFiles.add(line);
+						continue;
+					}
+
+					if(readingFiles && StringUtils.isBlank(line)) {
+						// Separator before comment is a blank line
+						readingFiles = false;
+						continue;
+					}
+
+					// Comments
+					ticket = line.substring(0, line.indexOf(' '));
+					if (comments.length() > 0) {
+						comments.append("\n");
+					}
+					comments.append(line);
 				}
-				comments.append(line);
 			}
+			return logs;
 		}
-		return logs;
-	}
 
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("SvnLogExtractor [svnWorkDir=");
-		builder.append(svnWorkDir);
-		builder.append(", outputFolder=");
-		builder.append(outputFolder);
-		builder.append(", extractMode=");
-		builder.append(extractMode);
-		builder.append(", executionMode=");
-		builder.append(executionMode);
-		builder.append(", filePathToAnalyze=");
-		builder.append(filePathToAnalyze);
-		builder.append(", limit=");
-		builder.append(limit);
-		builder.append(", comment=");
-		builder.append(comment);
-		builder.append(", verbose=");
-		builder.append(verbose);
-		builder.append(", exportLog=");
-		builder.append(exportLog);
-		builder.append(", clearTempFiles=");
-		builder.append(clearTempFiles);
-		builder.append("]");
-		return builder.toString();
-	}
+		@Override
+		public String toString() {
+			StringBuilder builder = new StringBuilder();
+			builder.append("SvnLogExtractor [svnWorkDir=");
+			builder.append(svnWorkDir);
+			builder.append(", outputFolder=");
+			builder.append(outputFolder);
+			builder.append(", extractMode=");
+			builder.append(extractMode);
+			builder.append(", executionMode=");
+			builder.append(executionMode);
+			builder.append(", filePathToAnalyze=");
+			builder.append(filePathToAnalyze);
+			builder.append(", limit=");
+			builder.append(limit);
+			builder.append(", comment=");
+			builder.append(comment);
+			builder.append(", verbose=");
+			builder.append(verbose);
+			builder.append(", exportLog=");
+			builder.append(exportLog);
+			builder.append(", clearTempFiles=");
+			builder.append(clearTempFiles);
+			builder.append("]");
+			return builder.toString();
+		}
 
-}
+	}
