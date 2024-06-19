@@ -81,7 +81,7 @@ public class SvnLogExtractor {
 	private String filePathToAnalyze;
 	private URL urlToAnalyze;
 	private int limit;
-	private int monthsLimit;
+	private int daysLimit;
 	private String comment;
 	private boolean verbose;
 	private boolean exportLog;
@@ -139,15 +139,16 @@ public class SvnLogExtractor {
 	}
 
 	/**
-	 * Sets a number of months in the past from the current to search for commits
-	 * @param monthsLimit
+	 * Sets a number of days in the past from the current day to search for commits
+	 * 
+	 * @param daysLimit
 	 * @return
 	 */
-	public SvnLogExtractor lookMonthsBack(int monthsLimit) {
-		if(monthsLimit < 0) {
-			monthsLimit = 0;
+	public SvnLogExtractor lookDaysBack(int daysLimit) {
+		if(daysLimit < 0) {
+			daysLimit = 0;
 		}
-		this.monthsLimit = monthsLimit;
+		this.daysLimit = daysLimit;
 		return this;
 	}
 
@@ -285,10 +286,11 @@ public class SvnLogExtractor {
 		if(listModifiedFiles) {
 			options.append(SvnConstants.LOG_OPT_VERBOSE).append(" ");
 		}
-		if(monthsLimit > 0) {
+		if(daysLimit > 0) {
 			// Always extract logs in descending order
+			// Adding one day to allow searching files avoiding any time zone issues
 			Date today = DateUtils.addDays(new Date(), 1);
-			Date thePast = DateUtils.addMonths(today, -monthsLimit);
+			Date thePast = DateUtils.addDays(today, -daysLimit);
 			String dateEnd = new SimpleDateFormat("yyyy-MM-dd").format(today);
 			String dateStart = new SimpleDateFormat("yyyy-MM-dd").format(thePast);
 			options.append(SvnConstants.LOG_OPT_DATE_RANGE.replaceFirst("DATE_END", dateEnd).replaceFirst("DATE_START", dateStart)).append(" ");
@@ -421,4 +423,4 @@ public class SvnLogExtractor {
 			return builder.toString();
 		}
 
-	}
+}
