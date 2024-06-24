@@ -28,4 +28,15 @@ public class SvnConstants {
 	public static final String LOG_SEPARATOR = StringUtils.repeat("-", 72);
 	public static final String LOG_CHANGED_PATHS_START = "Changed paths:";
 
+	// Difference Analyzer constants
+	public static final String ONLY_IN = "Only in";
+	public static final String DIFF = "diff";
+	public static final String PLUS_3 = "+++";
+	public static final String MINUS_3 = "---";
+	public static final String RIGHT = "+";
+	public static final String LEFT = "-";
+	public static final String BLOCK = "@@";
+
+	public static final String BLANK_SP = "&nbsp;";
+	public static final String TAB_SPS = "&nbsp;&nbsp;&nbsp;";
 }
