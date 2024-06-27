@@ -313,114 +313,121 @@ public class SvnLogExtractor {
 		}
 	}
 
-		/**
-		 * Read the logs, either from the file in the given logFile path exportLog=true, or from theEntrie if exportLog=false
-		 */
-		private List<SvnLog> readLogs(String filePath, String fileName, String logFile, String logEntries) throws IOException {
-			List<SvnLog> logs = new ArrayList<SvnLog>();
-			// TODO read file using a buffer to avoid out-of-memory errors
-			List<String> logLines = null;
-			if (exportLog) {
-				logLines = FileUtils.readLines(new File(logFile));
-			} else {
-				logLines = Arrays.asList(StringUtils.split(logEntries, "\r\n"));
+	/**
+	 * Read the logs, either from the file in the given logFile path exportLog=true, or from theEntrie if exportLog=false
+	 */
+	private List<SvnLog> readLogs(String filePath, String fileName, String logFile, String logEntries) throws IOException {
+		List<SvnLog> logs = new ArrayList<SvnLog>();
+		// TODO read file using a buffer to avoid out-of-memory errors
+		List<String> logLines = null;
+		if (exportLog) {
+			logLines = FileUtils.readLines(new File(logFile));
+		} else {
+			logLines = Arrays.asList(StringUtils.splitByWholeSeparator(logEntries, "\n"));
+		}
+
+		int linesInLog = 0;
+		long revision = 0;
+		String ticket = "";
+		String committer = "";
+		String commitTime = "";
+		StringBuilder comments = new StringBuilder();
+		List<String> committedFiles = new ArrayList<String>();
+		boolean readingFiles = false;
+		for (String line : logLines) {
+			line = line.trim();
+			if (line.trim().equals(SvnConstants.LOG_SEPARATOR)) {
+				if (linesInLog > 1) {
+					SvnLog log = new SvnLog(filePath, fileName, revision, committer, commitTime, ticket, comments.toString());
+					for(String cf : committedFiles) {
+						char op = cf.trim().charAt(0);
+						String file = cf.trim().substring(2);
+						OperationType ot = OperationType.getOperationType(op);
+						log.getModifiedFiles().add(new ModifiedFile(ot, file));
+					}
+					logs.add(log);
+				}
+
+				// New log file init
+				linesInLog = 0;
+				revision = 0;
+				ticket = "";
+				committer = "";
+				commitTime = "";
+				comments.setLength(0);
+				readingFiles = false;
+				committedFiles.clear();
+				continue;
+			}
+			linesInLog++;
+
+			if (linesInLog == 1 && line.isEmpty()) {
+				// An unexpected blank line
+				linesInLog = 0;
+				continue;
 			}
 
-			int linesInLog = 0;
-			long revision = 0;
-			String ticket = "";
-			String committer = "";
-			String commitTime = "";
-			StringBuilder comments = new StringBuilder();
-			List<String> committedFiles = new ArrayList<String>();
-			boolean readingFiles = false;
-			for (String line : logLines) {
-				if (line.trim().equals(SvnConstants.LOG_SEPARATOR)) {
-					if (linesInLog > 1) {
-						SvnLog log = new SvnLog(filePath, fileName, revision, committer, commitTime, ticket, comments.toString());
-						for(String cf : committedFiles) {
-							char op = cf.trim().charAt(0);
-							String file = cf.trim().substring(2);
-							OperationType ot = OperationType.getOperationType(op);
-							log.getModifiedFiles().add(new ModifiedFile(ot, file));
-						}
-						logs.add(log);
-					}
+			if (linesInLog == 1) {
+				String[] tokens = line.split("\\|");
+				String revString = tokens[0].trim().substring(1);
+				revision = Long.parseLong(revString);
+				committer = tokens[1].trim();
+				commitTime = tokens[2].trim();
 
-					// New log file init
-					linesInLog = 0;
-					revision = 0;
-					ticket = "";
-					committer = "";
-					commitTime = "";
-					comments.setLength(0);
-					readingFiles = false;
-					committedFiles.clear();
+			} else if (linesInLog > 1) {
+				if(linesInLog == 2 && line.startsWith(SvnConstants.LOG_CHANGED_PATHS_START)) {
+					readingFiles = true;
 					continue;
 				}
-				linesInLog++;
 
-				if (linesInLog == 1) {
-					String[] tokens = line.split("\\|");
-					String revString = tokens[0].trim().substring(1);
-					revision = Long.parseLong(revString);
-					committer = tokens[1].trim();
-					commitTime = tokens[2].trim();
-
-				} else if (linesInLog > 1) {
-					if(linesInLog == 2 && line.startsWith(SvnConstants.LOG_CHANGED_PATHS_START)) {
-						readingFiles = true;
-						continue;
-					}
-
-					if(readingFiles && StringUtils.isNotBlank(line)) {
-						// Read file
-						committedFiles.add(line);
-						continue;
-					}
-
-					if(readingFiles && StringUtils.isBlank(line)) {
-						// Separator before comment is a blank line
-						readingFiles = false;
-						continue;
-					}
-
-					// Comments
-					ticket = line.substring(0, line.indexOf(' '));
-					if (comments.length() > 0) {
-						comments.append("\n");
-					}
-					comments.append(line);
+				if(readingFiles && StringUtils.isNotBlank(line)) {
+					// Read file
+					committedFiles.add(line);
+					continue;
 				}
-			}
-			return logs;
-		}
 
-		@Override
-		public String toString() {
-			StringBuilder builder = new StringBuilder();
-			builder.append("SvnLogExtractor [svnWorkDir=");
-			builder.append(svnWorkDir);
-			builder.append(", outputFolder=");
-			builder.append(outputFolder);
-			builder.append(", extractMode=");
-			builder.append(extractMode);
-			builder.append(", executionMode=");
-			builder.append(executionMode);
-			builder.append(", filePathToAnalyze=");
-			builder.append(filePathToAnalyze);
-			builder.append(", limit=");
-			builder.append(limit);
-			builder.append(", comment=");
-			builder.append(comment);
-			builder.append(", verbose=");
-			builder.append(verbose);
-			builder.append(", exportLog=");
-			builder.append(exportLog);
-			builder.append(", clearTempFiles=");
-			builder.append(clearTempFiles);
-			builder.append("]");
-			return builder.toString();
+				if(readingFiles && StringUtils.isBlank(line)) {
+					// Separator before comment is a blank line
+					readingFiles = false;
+					continue;
+				}
+
+				// Comments
+				ticket = line.substring(0, line.indexOf(' '));
+				if (comments.length() > 0) {
+					comments.append("\n");
+				}
+				comments.append(line);
+			}
 		}
+		return logs;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("SvnLogExtractor [svnWorkDir=");
+		builder.append(svnWorkDir);
+		builder.append(", outputFolder=");
+		builder.append(outputFolder);
+		builder.append(", extractMode=");
+		builder.append(extractMode);
+		builder.append(", executionMode=");
+		builder.append(executionMode);
+		builder.append(", filePathToAnalyze=");
+		builder.append(filePathToAnalyze);
+		builder.append(", limit=");
+		builder.append(limit);
+		builder.append(", comment=");
+		builder.append(comment);
+		builder.append(", verbose=");
+		builder.append(verbose);
+		builder.append(", exportLog=");
+		builder.append(exportLog);
+		builder.append(", clearTempFiles=");
+		builder.append(clearTempFiles);
+		builder.append("]");
+		return builder.toString();
+	}
 
 }
