@@ -361,9 +361,13 @@ public class SvnLogExtractor {
 			}
 			linesInLog++;
 
-			if (linesInLog == 1 && line.isEmpty()) {
+			if (line.isEmpty() && linesInLog == 1) {
 				// An unexpected blank line
 				linesInLog = 0;
+				continue;
+			}
+			if (line.isEmpty() && linesInLog == 2) {
+				// When verbose is false and no files are listed in the log
 				continue;
 			}
 
