@@ -397,9 +397,11 @@ public class SvnLogExtractor {
 				}
 
 				// Comments
-				ticket = line.substring(0, line.indexOf(' '));
-				if (comments.length() > 0) {
-					comments.append("\n");
+				if(StringUtils.isNotBlank(line)) {
+					ticket = line.substring(0, line.indexOf(' '));
+					if (comments.length() > 0) {
+						comments.append("\n");
+					}					
 				}
 				comments.append(line);
 			}
